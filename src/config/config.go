@@ -82,6 +82,9 @@ type Server struct {
 	// Optional configuration for protocol = tls
 	Tls *Tls `toml:"tls" json:"tls"`
 
+	// Optional configuration for protocol = tls and certificate will be obtained via acme
+	Acme *Acme `toml:"acme" json:"acme"`
+
 	// Optional configuration for backend_tls_enabled = true
 	BackendsTls *BackendsTls `toml:"backends_tls" json:"backends_tls"`
 
@@ -125,6 +128,11 @@ type tlsCommon struct {
 type Tls struct {
 	CertPath string `toml:"cert_path" json:"cert_path"`
 	KeyPath  string `toml:"key_path" json:"key_path"`
+	tlsCommon
+}
+
+type Acme struct {
+	Hosts []string `toml:"hosts" json:"hosts"`
 	tlsCommon
 }
 

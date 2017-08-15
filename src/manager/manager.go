@@ -274,8 +274,8 @@ func prepareConfig(name string, server config.Server, defaults config.Connection
 	case "":
 		server.Protocol = "tcp"
 	case "tls":
-		if server.Tls == nil {
-			return config.Server{}, errors.New("Need tls section for tls protocol")
+		if (server.Tls == nil) && (server.Acme == nil) {
+			return config.Server{}, errors.New("Need tls or acme section for tls protocol")
 		}
 		fallthrough
 	case "tcp":

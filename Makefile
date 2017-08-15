@@ -72,7 +72,8 @@ deps: clean-deps
 	github.com/gin-contrib/cors \
 	github.com/lxc/lxd/client \
 	github.com/lxc/lxd/lxc/config \
-	github.com/jtopjian/lxdhelpers
+	github.com/jtopjian/lxdhelpers \
+	golang.org/x/crypto/acme/autocert
 
 clean-dist:
 	rm -rf ./dist/${VERSION}

@@ -62,6 +62,30 @@ bind = "localhost:3000"
       "localhost:8001"
   ]
 
+[servers.test]
+protocol = "tls"
+bind = "localhost:443"
+
+  [servers.test.acme]
+  hosts = [ 
+    "brokenbeats.net",
+    "stream.brokenbeats.net",
+    "chat.brokenbeats.net"
+  ]
+
+  [servers.test.sni]                       # (optional)
+  read_timeout = "2s"                      # (optional) timeout for reading sni from client
+  hostname_matching_strategy = "exact"     # (optional) "exact" | "regexp" if regexp, then match using regular expression associated with backend.
+  unexpected_hostname_strategy = "reject"  # (optional) "default" | "reject" | "any" strategy for dealing with unknown hostname requests
+
+  [servers.test.discovery]
+  kind = "static"
+  static_list = [
+    "127.0.0.1:5001 sni=brokenbeats.net",
+    "127.0.0.1:5001 sni=chat.brokenbeats.net",
+    "127.0.0.1:8000 sni=stream.brokenbeats.net"
+  ]
+
 # ---------- udp example ----------- #
 
 [servers.udpsample]

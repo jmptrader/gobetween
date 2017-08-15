@@ -9,6 +9,7 @@ package tcp
 import (
 	"crypto/tls"
 	"crypto/x509"
+	"golang.org/x/crypto/acme/autocert"
 	"io/ioutil"
 	"net"
 	"time"
@@ -242,6 +243,50 @@ func (this *Server) wrap(conn net.Conn, sniEnabled bool, tlsConfig *tls.Config) 
 
 }
 
+func (this *Server) makeTlsConfig() (*tls.Config, error) {
+	log := logging.For("server.mapeTlsConfig")
+	var crt tls.Certificate
+	var err error
+
+	if crt, err = tls.LoadX509KeyPair(this.cfg.Tls.CertPath, this.cfg.Tls.KeyPath); err != nil {
+		log.Error(err)
+		return nil, err
+	}
+
+	tlsConfig := &tls.Config{
+		Certificates:             []tls.Certificate{crt},
+		CipherSuites:             tlsutil.MapCiphers(this.cfg.Tls.Ciphers),
+		PreferServerCipherSuites: this.cfg.Tls.PreferServerCiphers,
+		MinVersion:               tlsutil.MapVersion(this.cfg.Tls.MinVersion),
+		MaxVersion:               tlsutil.MapVersion(this.cfg.Tls.MaxVersion),
+		SessionTicketsDisabled:   !this.cfg.Tls.SessionTickets,
+	}
+
+	return tlsConfig, nil
+}
+
+func (this *Server) makeAcmeTlsConfig() *tls.Config {
+	certManager := autocert.Manager{
+		Prompt:     autocert.AcceptTOS,
+		HostPolicy: autocert.HostWhitelist(this.cfg.Acme.Hosts...),
+		Cache:      autocert.DirCache("/tmp"),
+	}
+
+	tlsConfig := &tls.Config{
+		GetCertificate: certManager.GetCertificate,
+	}
+
+	if this.cfg.Tls != nil {
+		tlsConfig.CipherSuites = tlsutil.MapCiphers(this.cfg.Tls.Ciphers)
+		tlsConfig.PreferServerCipherSuites = this.cfg.Tls.PreferServerCiphers
+		tlsConfig.MinVersion = tlsutil.MapVersion(this.cfg.Tls.MinVersion)
+		tlsConfig.MaxVersion = tlsutil.MapVersion(this.cfg.Tls.MaxVersion)
+		tlsConfig.SessionTicketsDisabled = !this.cfg.Tls.SessionTickets
+	}
+
+	return tlsConfig
+}
+
 /**
  * Listen on specified port for a connections
  */
@@ -257,21 +302,16 @@ func (this *Server) Listen() (err error) {
 
 	if this.cfg.Protocol == "tls" {
 
-		// Create tls listener
-		var crt tls.Certificate
-		if crt, err = tls.LoadX509KeyPair(this.cfg.Tls.CertPath, this.cfg.Tls.KeyPath); err != nil {
-			log.Error(err)
-			return err
+		if this.cfg.Acme != nil {
+			tlsConfig = this.makeAcmeTlsConfig()
+		} else {
+			tlsConfig, err = this.makeTlsConfig()
+			if err != nil {
+				log.Error(err)
+				return err
+			}
 		}
 
-		tlsConfig = &tls.Config{
-			Certificates:             []tls.Certificate{crt},
-			CipherSuites:             tlsutil.MapCiphers(this.cfg.Tls.Ciphers),
-			PreferServerCipherSuites: this.cfg.Tls.PreferServerCiphers,
-			MinVersion:               tlsutil.MapVersion(this.cfg.Tls.MinVersion),
-			MaxVersion:               tlsutil.MapVersion(this.cfg.Tls.MaxVersion),
-			SessionTicketsDisabled:   !this.cfg.Tls.SessionTickets,
-		}
 	}
 
 	if err != nil {
